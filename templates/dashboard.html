@@ -26,14 +26,17 @@
         <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
     </form>
 
-    <!-- Clients List -->
-    <div id="clients-list">
-        {% for client in clients %}
+   <h2>Active Clients</h2>
+    <div id="active-clients">
+        {% for client in active_clients %}
         <div class="card mb-3" id="client-{{ client.id }}">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <strong>{{ client.name }}</strong>
-                <button class="btn btn-sm btn-outline-primary toggle-graph" data-client="{{ client.id }}">Show Graph</button>
-                <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete Client</button>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary toggle-graph" data-client="{{ client.id }}">Show Graph</button>
+                    <button class="btn btn-warning btn-sm archive-client" data-id="{{ client.id }}">Archive</button>
+                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete</button>
+                </div>
             </div>
             <div class="card-body" style="display:none;">
                 <!-- Chart -->
@@ -54,17 +57,33 @@
         </div>
         {% endfor %}
     </div>
+
+    <h2 class="mt-4">Archived Clients</h2>
+    <div id="archived-clients">
+        {% for client in archived_clients %}
+        <div class="card mb-3" id="client-{{ client.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>{{ client.name }}</strong>
+                <div>
+                    <button class="btn btn-success btn-sm unarchive-client" data-id="{{ client.id }}">Unarchive</button>
+                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete</button>
+                </div>
+            </div>
+            <!-- No chart or Add Data form here -->
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
 <script>
 $(document).ready(function() {
 
-    // Toggle graph visibility
-    $('.toggle-graph').click(function() {
+    // Toggle graph visibility for active clients
+    $(document).on('click', '.toggle-graph', function() {
         var clientId = $(this).data('client');
         var cardBody = $('#client-' + clientId + ' .card-body');
-        cardBody.toggle();
-        if(cardBody.is(':visible')) {
+        cardBody.toggle();  // show/hide chart + form
+        if (cardBody.is(':visible')) {
             fetchData(clientId);
         }
     });
@@ -124,6 +143,26 @@ $(document).ready(function() {
         const clientId = $(this).data('id');
         if (confirm('Are you sure you want to delete this client and all its data?')) {
             $.post('/delete_client/' + clientId, function() {
+                location.reload();
+            });
+        }
+    });
+
+    // Archive client
+    $(document).on('click', '.archive-client', function() {
+        const clientId = $(this).data('id');
+        if (confirm('Archive this client?')) {
+            $.post('/archive_client/' + clientId, function() {
+                location.reload();
+            });
+        }
+    });
+
+    // Unarchive client
+    $(document).on('click', '.unarchive-client', function() {
+        const clientId = $(this).data('id');
+        if (confirm('Unarchive this client?')) {
+            $.post('/unarchive_client/' + clientId, function() {
                 location.reload();
             });
         }

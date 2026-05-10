@@ -14,6 +14,7 @@ db = SQLAlchemy(app)
 class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    archived = db.Column(db.Boolean, default=False)  # <-- new field
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     data_points = db.relationship('DataPoint', backref='client', lazy=True)
 
@@ -30,8 +31,11 @@ with app.app_context():
 # Routes
 @app.route('/')
 def index():
-    clients = Client.query.all()
-    return render_template('dashboard.html', clients=clients)
+    active_clients = Client.query.filter_by(archived=False).all()
+    archived_clients = Client.query.filter_by(archived=True).all()
+    return render_template('dashboard.html',
+                           active_clients=active_clients,
+                           archived_clients=archived_clients)
 
 @app.route('/add_client', methods=['POST'])
 def add_client():
@@ -60,6 +64,22 @@ def get_data(client_id):
     dates = [dp.date.strftime('%Y-%m-%d') for dp in data_points]
     values = [dp.value for dp in data_points]
     return jsonify({'dates': dates, 'values': values})
+
+# Archive a client
+@app.route('/archive_client/<int:client_id>', methods=['POST'])
+def archive_client(client_id):
+    client = Client.query.get_or_404(client_id)
+    client.archived = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+# Unarchive a client
+@app.route('/unarchive_client/<int:client_id>', methods=['POST'])
+def unarchive_client(client_id):
+    client = Client.query.get_or_404(client_id)
+    client.archived = False
+    db.session.commit()
+    return jsonify({'success': True})
 
 # ----------------------------
 # Delete a client and all its data
