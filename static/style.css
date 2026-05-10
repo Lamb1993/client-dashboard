@@ -1,0 +1,110 @@
+/* -------------------------
+   Light/Dark Mode Variables
+--------------------------- */
+:root {
+    --bg-color: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-color: #343a40;
+    --btn-bg: #007bff;
+    --btn-text: #ffffff;
+}
+
+body.dark-mode {
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --btn-bg: #1a73e8;
+    --btn-text: #ffffff;
+    --background-color: transparent;
+}
+
+/* -------------------------
+   Apply colors to page
+--------------------------- */
+html, body {
+    min-height: 100%;
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    min-height: 100vh; /* fill full viewport */
+}
+
+/* -------------------------
+   Cards
+--------------------------- */
+.card, .card-header, .card-body {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* -------------------------
+   Buttons
+--------------------------- */
+button {
+    background-color: var(--btn-bg);
+    color: var(--btn-text);
+    border: none;
+    transition: all 0.2s;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+/* -------------------------
+   Charts
+--------------------------- */
+.chart-div {
+    height: 300px;
+    width: 100%;
+}
+
+/* -------------------------
+   Card body spacing
+--------------------------- */
+.card-body {
+    min-height: 350px;
+}
+
+/* -------------------------
+   Forms
+--------------------------- */
+/* Add Data Form styling for horizontal layout */
+.add-data-form {
+    display: flex;
+    flex-wrap: wrap;         /* allow stacking on narrow screens */
+    align-items: stretch;    /* make all children same height */
+    gap: 0.5rem;
+}
+
+.add-data-form .flex-grow-1 {
+    flex: 1 1 auto;          /* inputs expand to fill available space */
+    min-width: 100px;        /* don’t shrink too small */
+}
+
+.add-data-form button {
+    flex: 0 0 auto;          /* button stays compact */
+}
+
+/* -------------------------
+   Responsive adjustments
+--------------------------- */
+/* Optional: full-width stacking on mobile screens */
+@media (max-width: 576px) {
+    .add-data-form .flex-grow-1, .add-data-form button {
+        flex: 1 1 100%;
+    }
+}

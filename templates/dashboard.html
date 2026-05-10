@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ariana's Client Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Plotly JS -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div class="container py-4">
+    <h1 class="mb-4">Ariana's Client Dashboard</h1>
+
+    <!-- Dark Mode Toggle -->
+    <div class="d-flex justify-content-end mb-3">
+        <button id="dark-mode-toggle" class="btn btn-secondary btn-sm">🌙 Dark Mode</button>
+    </div>
+
+    <!-- Add New Client -->
+    <form id="add-client-form" class="mb-3 d-flex gap-2">
+        <input type="text" name="name" placeholder="New Client Name" class="form-control form-control-sm" required>
+        <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
+    </form>
+
+    <!-- Clients List -->
+    <div id="clients-list">
+        {% for client in clients %}
+        <div class="card mb-3" id="client-{{ client.id }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>{{ client.name }}</strong>
+                <button class="btn btn-sm btn-outline-primary toggle-graph" data-client="{{ client.id }}">Show Graph</button>
+                <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete Client</button>
+            </div>
+            <div class="card-body" style="display:none;">
+                <!-- Chart -->
+                <div id="chart-{{ client.id }}" class="chart-div"></div>
+                <!-- Add Data Form -->
+                <form class="add-data-form d-flex flex-wrap align-items-stretch gap-2 mt-3" data-client="{{ client.id }}">
+                    <div class="flex-grow-1">
+                        <input type="date" name="date" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="flex-grow-1">
+                        <input type="number" step="any" name="value" class="form-control form-control-sm" placeholder="Value" required>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-success btn-sm">Add Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+
+    // Toggle graph visibility
+    $('.toggle-graph').click(function() {
+        var clientId = $(this).data('client');
+        var cardBody = $('#client-' + clientId + ' .card-body');
+        cardBody.toggle();
+        if(cardBody.is(':visible')) {
+            fetchData(clientId);
+        }
+    });
+
+    // Add new client
+    $('#add-client-form').submit(function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        $.post('/add_client', formData, function(data) {
+            location.reload();
+        });
+    });
+
+    // Add new data point
+    $('.add-data-form').submit(function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var clientId = form.data('client');
+        var formData = form.serialize() + '&client_id=' + clientId;
+        $.post('/add_data', formData, function() {
+            fetchData(clientId);
+            form[0].reset();
+        });
+    });
+
+    // Fetch and plot data
+    function fetchData(clientId) {
+        $.getJSON('/get_data/' + clientId, function(data) {
+            var trace = { x: data.dates, y: data.values, type: 'scatter', mode: 'lines+markers' };
+            Plotly.newPlot('chart-' + clientId, [trace], {title: 'Client ' + clientId + ' Data'});
+        });
+    }
+
+    // -----------------------------
+    // Dark Mode Toggle
+    // -----------------------------
+    // Load saved preference
+    if (localStorage.getItem('darkMode') === 'enabled') {
+        $('body').addClass('dark-mode');
+        $('#dark-mode-toggle').text('☀️ Light Mode');
+    }
+
+    // Toggle on click
+    $('#dark-mode-toggle').click(function() {
+        $('body').toggleClass('dark-mode');
+        if ($('body').hasClass('dark-mode')) {
+            $(this).text('☀️ Light Mode');
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            $(this).text('🌙 Dark Mode');
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    });
+
+    // Delete an entire client
+    $(document).on('click', '.delete-client', function() {
+        const clientId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this client and all its data?')) {
+            $.post('/delete_client/' + clientId, function() {
+                location.reload();
+            });
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
