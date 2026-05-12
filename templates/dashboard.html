@@ -52,7 +52,12 @@
                     <div>
                         <button type="submit" class="btn btn-success btn-sm">Add Data</button>
                     </div>
-                </form>
+                </form> <!-- end Add Data Form -->
+                <!-- CSV Upload Form -->
+                <form class="csv-upload-form d-flex align-items-center gap-2 mt-2" data-client="{{ client.id }}" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                    <button type="submit" class="btn btn-secondary btn-sm" style="min-width: 100px;">Upload CSV</button>
+                </form> <!-- end CSV Upload Form -->    
             </div>
         </div>
         {% endfor %}
@@ -78,6 +83,10 @@
 <script>
 $(document).ready(function() {
 
+    // Default all date inputs to today's date
+    const today = new Date().toISOString().split('T')[0];
+    $('input[type="date"]').val(today);
+
     // Toggle graph visibility for active clients
     $(document).on('click', '.toggle-graph', function() {
         var clientId = $(this).data('client');
@@ -85,6 +94,13 @@ $(document).ready(function() {
         cardBody.toggle();  // show/hide chart + form
         if (cardBody.is(':visible')) {
             fetchData(clientId);
+        }
+
+        var btn = $(this);
+        if (cardBody.is(':visible')) {
+            btn.text('Hide Graph');
+        } else {
+            btn.text('Show Graph');
         }
     });
 
@@ -167,6 +183,26 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Upload CSV file for a client
+    $(document).on('submit', '.csv-upload-form', function(e) {
+        e.preventDefault();
+
+        const clientId = $(this).data('client');
+        const formData = new FormData(this);
+
+        $.ajax({
+            url: '/upload_csv/' + clientId,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                alert(`Created: ${res.created}\nUpdated: ${res.updated}`);
+                fetchData(clientId);
+            }
+    });
+});
 
 });
 </script>
