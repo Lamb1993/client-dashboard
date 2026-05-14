@@ -1,5 +1,5 @@
 import os
-from io import TextIOWrapper
+import io
 import csv
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -29,6 +29,7 @@ class ClientData(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
     date = db.Column(db.Date, nullable=False, index=True)
     value = db.Column(db.Float, nullable=False)
+    total = db.Column(db.Float, nullable=False, default=1.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Prevent duplicate entries for the same client/date
@@ -73,6 +74,7 @@ def add_data():
         client_id = int(request.form['client_id'])
         date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
         value = float(request.form['value'])
+        total = float(request.form['total'])
     except Exception:
         return jsonify({'error': 'Invalid input'}), 400
 
@@ -81,13 +83,14 @@ def add_data():
 
     if existing: # Update instead of inserting a duplicate
         existing.value = value
+        existing.total = total
         existing.created_at = datetime.utcnow()
         db.session.commit()
 
         return jsonify({'updated': True, 'id': existing.id, 'date': date.strftime('%Y-%m-%d'), 'value': value})
 
     # Otherwise create a new datapoint
-    new_dp = ClientData(client_id=client_id, date=date, value=value)
+    new_dp = ClientData(client_id=client_id, date=date, value=value, total=total)
     db.session.add(new_dp)
     db.session.commit()
 
@@ -98,9 +101,11 @@ def add_data():
 def get_data(client_id):
     client = Client.query.get_or_404(client_id)
     data_points = sorted(client.data_points, key=lambda x: x.date)
+
     dates = [dp.date.strftime('%Y-%m-%d') for dp in data_points]
-    values = [dp.value for dp in data_points]
-    return jsonify({'dates': dates, 'values': values})
+    percentages = [(dp.value / dp.total) * 100 for dp in data_points]
+
+    return jsonify({'dates': dates, 'values': percentages})
 
 # Archive a client
 @app.route('/archive_client/<int:client_id>', methods=['POST'])
@@ -129,62 +134,56 @@ def delete_client(client_id):
     return jsonify({'success': True})
 
 # upload a CSV file with date/value pairs for a client
-# date,value
-# 2024-01-01,10
-# 2024-01-02,12.5
-# 2024-01-03,9
+# date,value,total
+# 2024-01-01,3,6
+# 2024-01-02,5,10
+# 2024-01-03,2,4
 @app.route('/upload_csv/<int:client_id>', methods=['POST'])
 def upload_csv(client_id):
-    client = Client.query.get_or_404(client_id)
+    file = request.files.get('file')
 
-    if 'file' not in request.files:
+    if not file:
         return jsonify({'error': 'No file uploaded'}), 400
 
-    file = request.files['file']
-
-    if file.filename == '':
-        return jsonify({'error': 'Empty filename'}), 400
-
-    # Wrap file for text reading
-    try:
-        stream = TextIOWrapper(file.stream, encoding='utf-8')
-        reader = csv.DictReader(stream)
-    except Exception:
-        return jsonify({'error': 'Invalid CSV format'}), 400
+    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+    reader = csv.reader(stream)
 
     created = 0
     updated = 0
-    errors = []
 
-    for i, row in enumerate(reader, start=1):
-        try:
-            date = datetime.strptime(row['date'], '%Y-%m-%d').date()
-            value = float(row['value'])
-        except Exception:
-            errors.append(f"Row {i}: invalid date/value")
+    for row in reader:
+        if len(row) < 3:
             continue
 
-        # Check for existing datapoint
+        date_str, value_str, total_str = row[0], row[1], row[2]
+
+        try:
+            date = datetime.strptime(date_str.strip(), '%Y-%m-%d').date()
+            value = float(value_str)
+            total = float(total_str)
+        except Exception:
+            continue
+
         existing = ClientData.query.filter_by(client_id=client_id, date=date).first()
 
         if existing:
             existing.value = value
+            existing.total = total
             existing.created_at = datetime.utcnow()
             updated += 1
         else:
-            dp = ClientData(client_id=client_id, date=date, value=value)
+            dp = ClientData(
+                client_id=client_id,
+                date=date,
+                value=value,
+                total=total
+            )
             db.session.add(dp)
             created += 1
 
     db.session.commit()
+    return jsonify({'created': created, 'updated': updated})
 
-    return jsonify({
-        'success': True,
-        'client_id': client_id,
-        'created': created,
-        'updated': updated,
-        'errors': errors
-    })
 
 if __name__ == '__main__':
     app.run(debug=True)
