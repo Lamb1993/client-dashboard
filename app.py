@@ -56,6 +56,12 @@ def index():
     archived_clients = Client.query.filter_by(archived=True).all()
     return render_template('dashboard.html', active_clients=active_clients, archived_clients=archived_clients)
 
+# render a new template for a single client
+@app.route('/client/<int:client_id>')
+def client_page(client_id):
+    client = Client.query.get_or_404(client_id)
+    return render_template('client_page.html', client=client)
+
 # Add a new client
 @app.route('/add_client', methods=['POST'])
 def add_client():

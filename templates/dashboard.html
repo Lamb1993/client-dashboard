@@ -26,49 +26,19 @@
         <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
     </form>
 
-    <!-- Global Threshold Slider -->
-    <div class="threshold-control d-flex align-items-center gap-2 mb-3">
-        <label for="threshold-slider" class="mb-0">Threshold (%)</label>
-        <input id="threshold-slider" type="range" min="0" max="100" value="80"
-            class="form-range flex-grow-1" style="max-width: 300px;">
-        <span id="threshold-value" class="ms-1">80%</span>
-    </div>
-
    <h2>Active Clients</h2>
     <div id="active-clients">
         {% for client in active_clients %}
         <div class="card mb-3" id="client-{{ client.id }}">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <strong>{{ client.name }}</strong>
+                
                 <div>
-                    <button class="btn btn-sm btn-outline-primary toggle-graph" data-client="{{ client.id }}">Show Graph</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.location='/client/{{ client.id }}'">
+                        Open
+                    </button>
                     <button class="btn btn-warning btn-sm archive-client" data-id="{{ client.id }}">Archive</button>
-                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete</button>
                 </div>
-            </div>
-            <div class="card-body" style="display:none;">
-                <!-- Chart -->
-                <div id="chart-{{ client.id }}" class="chart-div"></div>
-                <!-- Add Data Form -->
-                <form class="add-data-form d-flex flex-wrap align-items-stretch gap-2 mt-3" data-client="{{ client.id }}">
-                    <div class="flex-grow-1">
-                        <input type="date" name="date" class="form-control form-control-sm" required>
-                    </div>
-                    <div class="flex-grow-1">
-                        <input type="number" step="any" name="value" class="form-control form-control-sm" placeholder="Value" required>
-                    </div>
-                    <div class="flex-grow-1">
-                        <input type="number" step="any" name="total" class="form-control form-control-sm" placeholder="Total" required>
-                    </div>
-                    <div>
-                        <button type="submit" class="btn btn-success btn-sm">Add Data</button>
-                    </div>
-                </form> <!-- end Add Data Form -->
-                <!-- CSV Upload Form -->
-                <form class="csv-upload-form d-flex align-items-center gap-2 mt-2" data-client="{{ client.id }}" enctype="multipart/form-data">
-                    <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
-                    <button type="submit" class="btn btn-secondary btn-sm" style="min-width: 100px;">Upload CSV</button>
-                </form> <!-- end CSV Upload Form -->    
             </div>
         </div>
         {% endfor %}
@@ -92,62 +62,8 @@
 </div>
 
 <script>
-let GLOBAL_THRESHOLD = 80;   // default, user-adjustable
 
 $(document).ready(function() {
-
-    ///////////////////// Slider Things /////////////////////
-    // update global chart indicator threshold
-    $('#threshold-slider').on('input', function () {
-        GLOBAL_THRESHOLD = parseFloat(this.value);
-        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
-
-        // Re-render all visible charts
-        $('.toggle-graph').each(function () {
-            const clientId = $(this).data('client');
-            const cardBody = $('#client-' + clientId + ' .card-body');
-
-            if (cardBody.is(':visible')) {
-                fetchData(clientId);
-            }
-        });
-    });
-
-    // Load saved threshold
-    if (localStorage.getItem('threshold')) {
-        GLOBAL_THRESHOLD = parseFloat(localStorage.getItem('threshold'));
-        $('#threshold-slider').val(GLOBAL_THRESHOLD);
-        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
-    }
-
-    // Save on change
-    $('#threshold-slider').on('input', function () {
-        GLOBAL_THRESHOLD = parseFloat(this.value);
-        localStorage.setItem('threshold', GLOBAL_THRESHOLD);
-    });
-
-    ///////////////////// Slider Things End /////////////////////
-
-    // Default all date inputs to today's date
-    const today = new Date().toISOString().split('T')[0];
-    $('input[type="date"]').val(today);
-
-    // Toggle graph visibility for active clients
-    $(document).on('click', '.toggle-graph', function() {
-        var clientId = $(this).data('client');
-        var cardBody = $('#client-' + clientId + ' .card-body');
-        cardBody.toggle();  // show/hide chart + form
-        if (cardBody.is(':visible')) {
-            fetchData(clientId);
-        }
-
-        var btn = $(this);
-        if (cardBody.is(':visible')) {
-            btn.text('Hide Graph');
-        } else {
-            btn.text('Show Graph');
-        }
-    });
 
     // Add new client
     $('#add-client-form').submit(function(e) {
@@ -157,63 +73,6 @@ $(document).ready(function() {
             location.reload();
         });
     });
-
-    // Add new data point
-    $('.add-data-form').submit(function(e) {
-        e.preventDefault();
-        var form = $(this);
-        var clientId = form.data('client');
-        var formData = form.serialize() + '&client_id=' + clientId;
-        $.post('/add_data', formData, function() {
-            fetchData(clientId);
-            form[0].reset();
-        });
-    });
-
-    // Fetch and plot data
-    function fetchData(clientId) {
-        $.getJSON('/get_data/' + clientId, function(data) {
-            var trace = { 
-                x: data.dates, 
-                y: data.values, 
-                type: 'scatter', 
-                mode: 'lines+markers' 
-            };
-            Plotly.newPlot('chart-' + clientId, [trace], {
-                title: 'Client ' + clientId + ' Data',
-                height: 500,
-                yaxis: { title: '%' },
-
-                shapes: [
-                    {
-                        type: 'line',
-                        x0: 0,
-                        x1: 1,
-                        xref: 'paper',
-                        y0: GLOBAL_THRESHOLD,
-                        y1: GLOBAL_THRESHOLD,
-                        line: {
-                            color: 'red',
-                            width: 2,
-                            dash: 'dash'
-                        }
-                    }
-                ],
-
-                annotations: [
-                    {
-                        xref: 'paper',
-                        x: 1.01,
-                        y: GLOBAL_THRESHOLD,
-                        xanchor: 'left',
-                        text: `${GLOBAL_THRESHOLD}%`,
-                        showarrow: false,
-                        font: { color: 'red' }
-                    }
-                ]
-            });
-        });
-    }
 
     // -----------------------------
     // Dark Mode Toggle
@@ -265,26 +124,6 @@ $(document).ready(function() {
             });
         }
     });
-
-    // Upload CSV file for a client
-    $(document).on('submit', '.csv-upload-form', function(e) {
-        e.preventDefault();
-
-        const clientId = $(this).data('client');
-        const formData = new FormData(this);
-
-        $.ajax({
-            url: '/upload_csv/' + clientId,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(res) {
-                alert(`Created: ${res.created}\nUpdated: ${res.updated}`);
-                fetchData(clientId);
-            }
-    });
-});
 
 });
 </script>
