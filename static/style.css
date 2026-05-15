@@ -64,6 +64,25 @@ button:hover {
     transform: scale(1.05);
 }
 
+
+/* -------------------------
+   Slider Threshold
+--------------------------- */
+.threshold-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.threshold-control label {
+    white-space: nowrap;
+}
+
+.threshold-control input[type="range"] {
+    flex-grow: 1;
+    margin: 0;
+}
+
 /* -------------------------
    Charts
 --------------------------- */

@@ -26,6 +26,14 @@
         <button type="submit" class="btn btn-primary btn-sm">Add Client</button>
     </form>
 
+    <!-- Global Threshold Slider -->
+    <div class="threshold-control d-flex align-items-center gap-2 mb-3">
+        <label for="threshold-slider" class="mb-0">Threshold (%)</label>
+        <input id="threshold-slider" type="range" min="0" max="100" value="80"
+            class="form-range flex-grow-1" style="max-width: 300px;">
+        <span id="threshold-value" class="ms-1">80%</span>
+    </div>
+
    <h2>Active Clients</h2>
     <div id="active-clients">
         {% for client in active_clients %}
@@ -84,7 +92,41 @@
 </div>
 
 <script>
+let GLOBAL_THRESHOLD = 80;   // default, user-adjustable
+
 $(document).ready(function() {
+
+    ///////////////////// Slider Things /////////////////////
+    // update global chart indicator threshold
+    $('#threshold-slider').on('input', function () {
+        GLOBAL_THRESHOLD = parseFloat(this.value);
+        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
+
+        // Re-render all visible charts
+        $('.toggle-graph').each(function () {
+            const clientId = $(this).data('client');
+            const cardBody = $('#client-' + clientId + ' .card-body');
+
+            if (cardBody.is(':visible')) {
+                fetchData(clientId);
+            }
+        });
+    });
+
+    // Load saved threshold
+    if (localStorage.getItem('threshold')) {
+        GLOBAL_THRESHOLD = parseFloat(localStorage.getItem('threshold'));
+        $('#threshold-slider').val(GLOBAL_THRESHOLD);
+        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
+    }
+
+    // Save on change
+    $('#threshold-slider').on('input', function () {
+        GLOBAL_THRESHOLD = parseFloat(this.value);
+        localStorage.setItem('threshold', GLOBAL_THRESHOLD);
+    });
+
+    ///////////////////// Slider Things End /////////////////////
 
     // Default all date inputs to today's date
     const today = new Date().toISOString().split('T')[0];
@@ -138,9 +180,37 @@ $(document).ready(function() {
                 mode: 'lines+markers' 
             };
             Plotly.newPlot('chart-' + clientId, [trace], {
-                title: 'Client ' + clientId + ' Data', 
+                title: 'Client ' + clientId + ' Data',
                 height: 500,
-                yaxis: {title: '%'}
+                yaxis: { title: '%' },
+
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: 0,
+                        x1: 1,
+                        xref: 'paper',
+                        y0: GLOBAL_THRESHOLD,
+                        y1: GLOBAL_THRESHOLD,
+                        line: {
+                            color: 'red',
+                            width: 2,
+                            dash: 'dash'
+                        }
+                    }
+                ],
+
+                annotations: [
+                    {
+                        xref: 'paper',
+                        x: 1.01,
+                        y: GLOBAL_THRESHOLD,
+                        xanchor: 'left',
+                        text: `${GLOBAL_THRESHOLD}%`,
+                        showarrow: false,
+                        font: { color: 'red' }
+                    }
+                ]
             });
         });
     }
