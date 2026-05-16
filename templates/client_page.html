@@ -18,6 +18,25 @@
         ← Back to Dashboard
     </button>
 
+    <!-- Program Lists Section -->
+    <div class="program-list-section mt-3">
+
+        <h4>Program Lists</h4>
+
+        <!-- Add Program List -->
+        <div class="d-flex gap-2 mb-2">
+            <input type="text" id="pl-name" class="form-control form-control-sm"
+                placeholder="New Program List">
+            <button class="btn btn-primary btn-sm" onclick="addProgramList({{ client.id }})">
+                Add
+            </button>
+        </div>
+
+        <!-- Program Lists Container -->
+        <div id="program-lists"></div>
+
+    </div>
+
    <!-- Threshold + Upload CSV Row -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
         <div class="threshold-control d-flex align-items-center gap-2">
@@ -59,7 +78,343 @@ if (localStorage.getItem('darkMode') === 'enabled') {
     $('body').addClass('dark-mode');
 }
 
+///////////////////
+// PROGRAM LIST JS 
+///////////////////
+function addProgramList(clientId) {
+    const name = $('#pl-name').val().trim();
+    if (!name) return;
+
+    $.post('/add_program_list', { client_id: clientId, name: name }, function() {
+        $('#pl-name').val('');
+        loadProgramLists(clientId);
+    });
+}
+
+function loadProgramLists(clientId) {
+    $.get('/get_program_lists/' + clientId, function(lists) {
+        const container = $('#program-lists');
+        container.empty();
+
+        lists.forEach(pl => {
+            const plId = pl.id;
+
+            container.append(`
+                <div class="card mb-2">
+
+                    <!-- CLICKABLE HEADER -->
+                    <div class="card-header d-flex justify-content-between align-items-center"
+                        style="cursor: pointer;"
+                        onclick="toggleProgramList(${plId})">
+
+                        <div class="d-flex align-items-center gap-2">
+                            <strong>${pl.name}</strong>
+                            <span id="pl-arrow-${plId}" class="ms-2">▼</span>
+                        </div>
+
+                        <button class="btn btn-danger btn-sm"
+                                onclick="event.stopPropagation(); deleteProgramList(${plId}, ${clientId})">
+                            Delete List
+                        </button>
+                    </div>
+
+                    <!-- COLLAPSIBLE BODY -->
+                    <div class="card-body" id="pl-body-${plId}" style="display: none;">
+
+                        <!-- Add Program -->
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="text" id="program-name-${plId}"
+                                   class="form-control form-control-sm"
+                                   placeholder="New Program">
+                            <button class="btn btn-primary btn-sm"
+                                    onclick="addProgram(${plId})">
+                                Add
+                            </button>
+                        </div>
+
+                        <!-- Programs -->
+                        <div id="programs-${plId}"></div>
+
+                    </div>
+                </div>
+            `);
+
+            loadPrograms(plId);
+        });
+    });
+}
+
+function deleteProgramList(plId, clientId) {
+    $.post('/delete_program_list/' + plId, function() {
+        loadProgramLists(clientId);
+    });
+}
+
+function toggleProgramList(plId) {
+    const body = $('#pl-body-' + plId);
+    const arrow = $('#pl-arrow-' + plId);
+
+    body.slideToggle(200);
+
+    if (arrow.text() === '▼') {
+        arrow.text('▲');
+    } else {
+        arrow.text('▼');
+    }
+}
+
+
+///////////////////
+// PROGRAM JS
+///////////////////
+function addProgram(programListId) {
+    const name = $('#program-name-' + programListId).val().trim();
+    if (!name) return;
+
+    $.post('/add_program', { program_list_id: programListId, name: name }, function() {
+        $('#program-name-' + programListId).val('');
+        loadPrograms(programListId);
+    });
+}
+
+function loadPrograms(programListId) {
+    $.get('/get_programs/' + programListId, function(programs) {
+        const container = $('#programs-' + programListId);
+        container.empty();
+
+        programs.forEach(p => {
+            const programId = p.id;
+
+            container.append(`
+                <div class="program-card card mb-2">
+
+                    <div class="card-header d-flex justify-content-between align-items-center"
+                        onclick="toggleProgram(${programId})">
+
+                        <div class="d-flex align-items-center gap-2">
+                            <strong>${p.name}</strong>
+                            <span id="program-arrow-${programId}" class="ms-2">▼</span>
+                        </div>
+
+                        <button class="btn btn-danger btn-sm"
+                                onclick="event.stopPropagation(); deleteProgram(${programId}, ${programListId})">
+                            Delete Program
+                        </button>
+                    </div>
+
+                    <div class="program-body" id="program-body-${programId}" style="display:none;">
+                        <!-- Add Target -->
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="text" id="target-name-${programId}"
+                                class="form-control form-control-sm"
+                                placeholder="New Target">
+                            <button class="btn btn-primary btn-sm"
+                                    onclick="addTarget(${programId})">
+                                Add
+                            </button>
+                        </div>
+
+                        <!-- Target List -->
+                        <div id="targets-${programId}" class="mb-3"></div>
+
+                        <!-- Plot Button -->
+                        <button class="btn btn-success btn-sm mb-2"
+                                onclick="plotSelectedTargets(${programId})">
+                            Plot Selected
+                        </button>
+                    </div>
+
+                </div>
+            `);
+        });
+    });
+}
+
+function deleteProgram(programId, programListId) {
+    $.post('/delete_program/' + programId, function() {
+        loadPrograms(programListId);
+    });
+}
+
+function toggleProgram(programId) {
+    const body = $('#program-body-' + programId);
+    const arrow = $('#program-arrow-' + programId);
+
+    body.slideToggle(200);
+
+    if (arrow.text() === '▼') {
+        arrow.text('▲');
+        loadTargets(programId);   // Load Targets when expanding
+    } else {
+        arrow.text('▼');
+    }
+}
+
+
+///////////////////
+// TARGETS JS
+///////////////////
+function addTarget(programId) {
+    const name = $('#target-name-' + programId).val().trim();
+    if (!name) return;
+
+    $.post('/add_target', { program_id: programId, name: name }, function() {
+        $('#target-name-' + programId).val('');
+        loadTargets(programId);
+    });
+}
+
+function loadTargets(programId) {
+    $.get('/get_targets/' + programId, function(targets) {
+        const container = $('#targets-' + programId);
+        container.empty();
+
+        targets.forEach(t => {
+            container.append(`
+                <div class="target-card mb-2">
+
+                    <div class="target-header d-flex justify-content-between align-items-center"
+                        onclick="toggleTarget(${t.id})">
+
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="checkbox" class="target-checkbox"
+                                data-target-id="${t.id}"
+                                onclick="event.stopPropagation();">
+                            <strong>${t.name}</strong>
+                            <span id="target-arrow-${t.id}" class="ms-2">▼</span>
+                        </div>
+
+                        <button class="btn btn-danger btn-sm"
+                                onclick="event.stopPropagation(); deleteTarget(${t.id}, ${programId})">
+                            Delete
+                        </button>
+                    </div>
+
+                    <div class="target-body" id="target-body-${t.id}" style="display:none;">
+                        <form class="datapoint-form d-flex align-items-center gap-1 mb-0"
+                            onsubmit="addDataPoint(event, ${t.id})">
+
+                            <input type="date" name="date" class="form-control form-control-sm"
+                                required style="max-width: 150px;">
+                            <input type="number" step="any" name="value"
+                                class="form-control form-control-sm"
+                                placeholder="Value" required style="max-width: 120px;">
+                            <input type="number" step="any" name="total"
+                                class="form-control form-control-sm"
+                                placeholder="Total" required style="max-width: 120px;">
+                            <button type="submit" class="btn btn-success btn-sm">Add</button>
+                        </form>
+                    </div>
+
+                </div>
+            `);
+        });
+    });
+}
+
+function deleteTarget(targetId, programId) {
+    $.post('/delete_target/' + targetId, function() {
+        loadTargets(programId);
+    });
+}
+
+function toggleTarget(targetId) {
+    const body = $('#target-body-' + targetId);
+    const arrow = $('#target-arrow-' + targetId);
+
+    body.slideToggle(200);
+
+    if (arrow.text() === '▼') {
+        arrow.text('▲');
+    } else {
+        arrow.text('▼');
+    }
+}
+
+function plotSelectedTargets(programId) {
+    const selected = [];
+
+    $(`#targets-${programId} .target-checkbox:checked`).each(function() {
+        selected.push($(this).data('target-id'));
+    });
+
+    if (selected.length === 0) {
+        alert("Select at least one target to plot.");
+        return;
+    }
+
+    $.ajax({
+        url: '/get_target_data',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ target_ids: selected }),
+        success: function(data) {
+            const traces = [];
+
+            Object.keys(data).forEach(tid => {
+                const t = data[tid];
+
+                traces.push({
+                    x: t.dates,
+                    y: t.percentages,
+                    mode: 'lines+markers',
+                    name: t.name
+                });
+            });
+
+            Plotly.newPlot(`program-chart-${programId}`, traces, {
+                title: 'Selected Targets',
+                yaxis: { title: '%' },
+                height: 400
+            });
+        }
+    });
+}
+
+///////////////////
+// DataPoints JS
+///////////////////
+function addDataPoint(e, targetId) {
+    e.preventDefault();
+
+    const form = $(e.target);
+    const formData = form.serialize() + '&target_id=' + targetId;
+
+    $.post('/add_datapoint', formData, function() {
+        loadDataPoints(targetId);
+        form[0].reset();
+    });
+}
+
+function loadDataPoints(targetId) {
+    $.get('/get_datapoints/' + targetId, function(points) {
+        const container = $('#datapoints-' + targetId);
+        container.empty();
+
+        points.forEach(p => {
+            container.append(`
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span>${p.date}: ${p.value}/${p.total}</span>
+                    <button class="btn btn-danger btn-sm"
+                            onclick="deleteDataPoint(${p.id}, ${targetId})">
+                        Delete
+                    </button>
+                </div>
+            `);
+        });
+    });
+}
+
+function deleteDataPoint(dpId, targetId) {
+    $.post('/delete_datapoint/' + dpId, function() {
+        loadDataPoints(targetId);
+    });
+}
+
+
 $(document).ready(function () {
+
+    loadProgramLists({{ client.id }});
 
     ///////// Slider /////////
     // Load saved threshold

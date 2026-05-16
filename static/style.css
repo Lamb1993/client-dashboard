@@ -91,11 +91,14 @@ button:hover {
     width: 100%;
 }
 
+.chart-div .card-body {
+    min-height: 550px;
+}
+
 /* -------------------------
    Card body spacing
 --------------------------- */
 .card-body {
-    min-height: 550px;
     border-radius: 0 0 10px 10px; /* match bottom corners only */
 }
 
@@ -121,6 +124,17 @@ button:hover {
 
 .csv-upload-form input[type="file"] {
     max-width: 200px;
+}
+
+.program-body,
+.target-body {
+    padding: 0.25rem 0.5rem;
+    margin: 0;
+    background-color: transparent;
+    border: none;
+    display: none; /* for slideToggle */
+    width: auto;
+    min-height: auto !important;
 }
 
 /* -------------------------
