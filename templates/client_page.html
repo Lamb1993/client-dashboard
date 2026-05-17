@@ -21,7 +21,16 @@
     <!-- Program Lists Section -->
     <div class="program-list-section mt-3">
 
-        <h4>Program Lists</h4>
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-2 flex-nowrap">
+            <h4 class="mb-0">Program Lists</h4>
+
+            <div class="threshold-control d-flex align-items-center gap-2 flex-shrink-0">
+                <label for="threshold-slider" class="mb-0">Threshold (%)</label>
+                <input id="threshold-slider" type="range" min="0" max="100" value="70"
+                    class="form-range" style="width: 200px;">
+                <span id="threshold-value" class="ms-1">70%</span>
+            </div>
+        </div>
 
         <!-- Add Program List -->
         <div class="d-flex gap-2 mb-2">
@@ -37,37 +46,30 @@
 
     </div>
 
-   <!-- Threshold + Upload CSV Row -->
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-        <div class="threshold-control d-flex align-items-center gap-2">
-            <label for="threshold-slider" class="mb-0">Threshold (%)</label>
-            <input id="threshold-slider" type="range" min="0" max="100" value="80"
-                class="form-range flex-grow-1" style="max-width: 300px;">
-            <span id="threshold-value" class="ms-1">80%</span>
+</div>
+
+<!-- Chart Modal Pop-Up -->
+<div class="modal fade" id="chartModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content chart-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Selected Targets Chart</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="modal-chart" class="chart-container"></div>
+
+        <!-- Threshold control -->
+        <div class="threshold-control mt-3 d-flex align-items-center gap-2">
+          <label for="modal-threshold" class="mb-0">Threshold (%)</label>
+          <input id="modal-threshold" type="range" min="0" max="100" value="80"
+                 class="form-range flex-grow-1" style="max-width: 300px;">
+          <span id="modal-threshold-value" class="ms-1">80%</span>
         </div>
-
-        <!-- Upload CSV -->
-        <form class="csv-upload-form d-flex align-items-center gap-2"
-            data-client="{{ client.id }}"
-            enctype="multipart/form-data">
-            <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
-            <button type="submit" class="btn btn-secondary btn-sm">Upload CSV</button>
-        </form>
+      </div>
     </div>
-
-    <!-- Chart -->
-    <div id="chart-{{ client.id }}" class="chart-div mb-4"></div>
-
-    <!-- Add Data Form -->
-    <form class="add-data-form d-flex align-items-center gap-2 mt-3 flex-wrap"
-        id="add-data-form"
-        data-client="{{ client.id }}">
-        <input type="date" name="date" class="form-control form-control-sm" required style="max-width: 150px;">
-        <input type="number" step="any" name="value" class="form-control form-control-sm" placeholder="Value" required style="max-width: 150px;">
-        <input type="number" step="any" name="total" class="form-control form-control-sm" placeholder="Total" required style="max-width: 150px;">
-        <button type="submit" class="btn btn-success btn-sm">Add Data</button>
-    </form>
-
+  </div>
 </div>
 
 <script>
@@ -76,6 +78,46 @@ let GLOBAL_THRESHOLD = 80;
 // Apply saved dark mode preference
 if (localStorage.getItem('darkMode') === 'enabled') {
     $('body').addClass('dark-mode');
+}
+
+//////////////////////////////
+// SHARED THRESHOLD HANDLER //
+//////////////////////////////
+function setThreshold(val, updateChart = true) {
+    GLOBAL_THRESHOLD = val;
+    localStorage.setItem('threshold', val);
+
+    // Update main slider
+    $('#threshold-slider').val(val);
+    $('#threshold-value').text(val + '%');
+
+    // Update modal slider
+    $('#modal-threshold').val(val);
+    $('#modal-threshold-value').text(val + '%');
+
+    // If modal is open, update chart threshold line
+    if (updateChart && $('#chartModal').hasClass('show')) {
+        Plotly.relayout('modal-chart', {
+            shapes: [{
+                type: 'line',
+                x0: 0,
+                x1: 1,
+                xref: 'paper',
+                y0: val,
+                y1: val,
+                line: { color: 'red', width: 2, dash: 'dash' }
+            }],
+            annotations: [{
+                xref: 'paper',
+                x: 1.01,
+                y: val,
+                xanchor: 'left',
+                text: `${val}%`,
+                showarrow: false,
+                font: { color: 'red' }
+            }]
+        });
+    }
 }
 
 ///////////////////
@@ -333,7 +375,6 @@ function toggleTarget(targetId) {
 
 function plotSelectedTargets(programId) {
     const selected = [];
-
     $(`#targets-${programId} .target-checkbox:checked`).each(function() {
         selected.push($(this).data('target-id'));
     });
@@ -350,10 +391,8 @@ function plotSelectedTargets(programId) {
         data: JSON.stringify({ target_ids: selected }),
         success: function(data) {
             const traces = [];
-
             Object.keys(data).forEach(tid => {
                 const t = data[tid];
-
                 traces.push({
                     x: t.dates,
                     y: t.percentages,
@@ -362,14 +401,75 @@ function plotSelectedTargets(programId) {
                 });
             });
 
-            Plotly.newPlot(`program-chart-${programId}`, traces, {
+            // Retrieve persistent threshold
+            const threshold = parseFloat(localStorage.getItem('threshold')) || 80;
+            $('#modal-threshold').val(threshold);
+            $('#modal-threshold-value').text(threshold + '%');
+
+            // Plot chart with threshold line
+            Plotly.newPlot('modal-chart', traces, {
                 title: 'Selected Targets',
                 yaxis: { title: '%' },
-                height: 400
-            });
+                height: 500,
+                shapes: [{
+                    type: 'line',
+                    x0: 0,
+                    x1: 1,
+                    xref: 'paper',
+                    y0: threshold,
+                    y1: threshold,
+                    line: { color: 'red', width: 2, dash: 'dash' }
+                }],
+                annotations: [{
+                    xref: 'paper',
+                    x: 1.01,
+                    y: threshold,
+                    xanchor: 'left',
+                    text: `${threshold}%`,
+                    showarrow: false,
+                    font: { color: 'red' }
+                }]
+            }, {responsive: true});
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('chartModal'));
+            modal.show();
         }
     });
 }
+
+// Threshold slider inside modal
+$('#modal-threshold').on('input', function () {
+    setThreshold(parseFloat(this.value));
+    const val = parseFloat(this.value);
+
+    // Update chart line dynamically
+    Plotly.relayout('modal-chart', {
+        shapes: [{
+            type: 'line',
+            x0: 0,
+            x1: 1,
+            xref: 'paper',
+            y0: val,
+            y1: val,
+            line: { color: 'red', width: 2, dash: 'dash' }
+        }],
+        annotations: [{
+            xref: 'paper',
+            x: 1.01,
+            y: val,
+            xanchor: 'left',
+            text: `${val}%`,
+            showarrow: false,
+            font: { color: 'red' }
+        }]
+    });
+});
+
+$('#chartModal').on('shown.bs.modal', function () {
+    Plotly.Plots.resize('modal-chart');
+});
+
 
 ///////////////////
 // DataPoints JS
@@ -386,25 +486,6 @@ function addDataPoint(e, targetId) {
     });
 }
 
-function loadDataPoints(targetId) {
-    $.get('/get_datapoints/' + targetId, function(points) {
-        const container = $('#datapoints-' + targetId);
-        container.empty();
-
-        points.forEach(p => {
-            container.append(`
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span>${p.date}: ${p.value}/${p.total}</span>
-                    <button class="btn btn-danger btn-sm"
-                            onclick="deleteDataPoint(${p.id}, ${targetId})">
-                        Delete
-                    </button>
-                </div>
-            `);
-        });
-    });
-}
-
 function deleteDataPoint(dpId, targetId) {
     $.post('/delete_datapoint/' + dpId, function() {
         loadDataPoints(targetId);
@@ -416,102 +497,18 @@ $(document).ready(function () {
 
     loadProgramLists({{ client.id }});
 
-    ///////// Slider /////////
-    // Load saved threshold
-    if (localStorage.getItem('threshold')) {
-        GLOBAL_THRESHOLD = parseFloat(localStorage.getItem('threshold'));
-        $('#threshold-slider').val(GLOBAL_THRESHOLD);
-        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
-    }
+    const saved = parseFloat(localStorage.getItem('threshold')) || 80;
+    setThreshold(saved, false);
 
-    // Update threshold live
     $('#threshold-slider').on('input', function () {
-        GLOBAL_THRESHOLD = parseFloat(this.value);
-        $('#threshold-value').text(GLOBAL_THRESHOLD + '%');
-        localStorage.setItem('threshold', GLOBAL_THRESHOLD);
-
-        // Re-render chart
-        fetchData({{ client.id }});
-    });
-    ///////// Slider End /////////
-
-
-    // set date picker to current date
-    const today = new Date().toISOString().split('T')[0];
-    $('input[type="date"]').val(today);
-
-    // Load chart immediately
-    fetchData({{ client.id }});
-
-    // Add data
-    $('#add-data-form').submit(function(e) {
-        e.preventDefault();
-        const clientId = $(this).data('client');
-        const formData = $(this).serialize() + '&client_id=' + clientId;
-
-        $.post('/add_data', formData, function() {
-            fetchData(clientId);
-        });
-    });
-
-    // CSV upload
-    $('.csv-upload-form').submit(function(e) {
-        e.preventDefault();
-        const clientId = $(this).data('client');
-        const formData = new FormData(this);
-
-        $.ajax({
-            url: '/upload_csv/' + clientId,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(res) {
-                alert(`Created: ${res.created}\nUpdated: ${res.updated}`);
-                fetchData(clientId);
-            }
-        });
+        setThreshold(parseFloat(this.value));
     });
 
 });
 
-// Fetch and plot data
-function fetchData(clientId) {
-    $.getJSON('/get_data/' + clientId, function(data) {
-        const trace = {
-            x: data.dates,
-            y: data.values,
-            type: 'scatter',
-            mode: 'lines+markers'
-        };
-
-        Plotly.newPlot('chart-' + clientId, [trace], {
-            title: '{{ client.name }} Data',
-            height: 500,
-            yaxis: { title: '%' },
-            shapes: [{
-                type: 'line',
-                x0: 0,
-                x1: 1,
-                xref: 'paper',
-                y0: GLOBAL_THRESHOLD,
-                y1: GLOBAL_THRESHOLD,
-                line: { color: 'red', width: 2, dash: 'dash' }
-            }],
-            annotations: [{
-                xref: 'paper',
-                x: 1.01,
-                y: GLOBAL_THRESHOLD,
-                xanchor: 'left',
-                text: `${GLOBAL_THRESHOLD}%`,
-                showarrow: false,
-                font: { color: 'red' }
-            }]
-        });
-    });
-}
-
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

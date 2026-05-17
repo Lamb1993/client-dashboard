@@ -15,7 +15,6 @@ body.dark-mode {
     --text-color: #e0e0e0;
     --btn-bg: #1a73e8;
     --btn-text: #ffffff;
-    --background-color: transparent;
 }
 
 /* -------------------------
@@ -83,17 +82,6 @@ button:hover {
     margin: 0;
 }
 
-/* -------------------------
-   Charts
---------------------------- */
-.chart-div {
-    height: 500px; /* must match Plotly height */
-    width: 100%;
-}
-
-.chart-div .card-body {
-    min-height: 550px;
-}
 
 /* -------------------------
    Card body spacing
@@ -136,6 +124,44 @@ button:hover {
     width: auto;
     min-height: auto !important;
 }
+
+/* -------------------------
+   Plotly Modal
+--------------------------- */
+/* Dark-mode aware modal */
+.chart-modal {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid #444;
+}
+
+/* Make Plotly chart fill modal */
+.chart-container {
+    width: 100%;
+    flex: 1;        /* fills modal vertically */
+    height: 100%;   /* ensures Plotly sees full height */
+}
+
+/* Threshold slider styling */
+.threshold-control label {
+  color: var(--text-color);
+}
+
+#modal-chart {
+    width: 100%;
+    height: 100%;
+}
+
+.modal-body {
+    padding: 0; /* removes Bootstrap padding that shrinks the chart */
+}
+
+.chart-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    height: 80vh; /* modal height */
+}
+
 
 /* -------------------------
    Responsive adjustments
