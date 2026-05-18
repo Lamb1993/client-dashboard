@@ -146,16 +146,15 @@ function loadProgramLists(clientId) {
                 <div class="card mb-2">
 
                     <!-- CLICKABLE HEADER -->
-                    <div class="card-header d-flex justify-content-between align-items-center"
-                        style="cursor: pointer;"
-                        onclick="toggleProgramList(${plId})">
+                    <div class="card-header d-flex justify-content-between align-items-center program-list-header"
+                        data-id="${plId}">
 
                         <div class="d-flex align-items-center gap-2">
                             <strong>${pl.name}</strong>
                             <span id="pl-arrow-${plId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm delete-program-list" onclick="event.stopPropagation(); deleteProgramList(${plId}, ${clientId})">
+                        <button class="btn btn-danger btn-sm delete-program-list" data-id="${plId}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -205,6 +204,22 @@ function toggleProgramList(plId) {
     }
 }
 
+$(document).on('click', '.delete-program-list', function(event) {
+    event.stopPropagation(); // NOW it works
+    const id = $(this).data('id');
+
+    if (confirm('Delete this entire program list and all nested programs, targets, and data?')) {
+        $.post('/delete_program_list/' + id, function() {
+            location.reload();
+        });
+    }
+});
+
+$(document).on('click', '.program-list-header', function() {
+    const id = $(this).data('id');
+    toggleProgramList(id);
+});
+
 
 ///////////////////
 // PROGRAM JS
@@ -230,16 +245,15 @@ function loadPrograms(programListId) {
             container.append(`
                 <div class="program-card card mb-2">
 
-                    <div class="card-header d-flex justify-content-between align-items-center"
-                        onclick="toggleProgram(${programId})">
+                    <div class="card-header d-flex justify-content-between align-items-center program-header"
+                        data-id="${programId}">
 
                         <div class="d-flex align-items-center gap-2">
                             <strong>${p.name}</strong>
                             <span id="program-arrow-${programId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm delete-program"
-                                onclick="event.stopPropagation(); deleteProgram(${programId}, ${programListId})">
+                        <button class="btn btn-danger btn-sm delete-program" data-id="${programId}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -292,6 +306,22 @@ function toggleProgram(programId) {
     }
 }
 
+$(document).on('click', '.delete-program', function(event) {
+    event.stopPropagation(); // NOW it works
+    const id = $(this).data('id');
+
+    if (confirm('Delete this program and all its targets and data?')) {
+        $.post('/delete_program/' + id, function() {
+            location.reload();
+        });
+    }
+});
+
+$(document).on('click', '.program-header', function() {
+    const id = $(this).data('id');
+    toggleProgram(id);
+});
+
 
 ///////////////////
 // TARGETS JS
@@ -316,7 +346,7 @@ function loadTargets(programId) {
                 <div class="target-card mb-2">
 
                     <div class="target-header d-flex justify-content-between align-items-center"
-                        onclick="toggleTarget(${t.id})">
+                        data-id="${t.id}">
 
                         <div class="d-flex align-items-center gap-2">
                             <input type="checkbox" class="target-checkbox"
@@ -327,7 +357,7 @@ function loadTargets(programId) {
                         </div>
 
                         <button class="btn btn-danger btn-sm delete-target"
-                                onclick="event.stopPropagation(); deleteTarget(${t.id}, ${programId})">
+                                data-id="${t.id}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -452,6 +482,22 @@ function plotSelectedTargets(programId) {
         }
     });
 }
+
+$(document).on('click', '.delete-target', function(event) {
+    event.stopPropagation(); // prevent toggle
+    const id = $(this).data('id');
+
+    if (confirm('Delete this target and all its datapoints?')) {
+        $.post('/delete_target/' + id, function() {
+            location.reload();
+        });
+    }
+});
+
+$(document).on('click', '.target-header', function() {
+    const id = $(this).data('id');
+    toggleTarget(id);
+});
 
 // Threshold slider inside modal
 $('#modal-threshold').on('input', function () {

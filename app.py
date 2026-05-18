@@ -126,6 +126,7 @@ def add_client():
         return jsonify({'id': client.id, 'name': client.name})
     return jsonify({'error': 'Name required'}), 400
 
+
 #####################################
 # Client Page Routes
 #####################################
@@ -183,6 +184,9 @@ def get_data(client_id):
 # 2024-01-03,2,4
 @app.route('/upload_target_csv/<int:target_id>', methods=['POST'])
 def upload_target_csv(target_id):
+    if 'csv_file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
     file = request.files['csv_file']
     created = 0
     updated = 0
@@ -244,6 +248,9 @@ def add_program_list():
     client_id = request.form.get('client_id')
     name = request.form.get('name')
 
+    if not name:
+        return jsonify({'error': 'Name required'}), 400
+
     pl = ProgramList(client_id=client_id, name=name)
     db.session.add(pl)
     db.session.commit()
@@ -264,13 +271,16 @@ def delete_program_list(pl_id):
 
 
 #####################################
-# Program List Routes
+# Program Routes
 #####################################
 
 @app.route('/add_program', methods=['POST'])
 def add_program():
     pl_id = request.form.get('program_list_id')
     name = request.form.get('name')
+
+    if not name:
+        return jsonify({'error': 'Name required'}), 400
 
     program = Program(program_list_id=pl_id, name=name)
     db.session.add(program)
@@ -299,6 +309,9 @@ def delete_program(program_id):
 def add_target():
     program_id = request.form.get('program_id')
     name = request.form.get('name')
+
+    if not name:
+        return jsonify({'error': 'Name required'}), 400
 
     t = Target(program_id=program_id, name=name)
     db.session.add(t)
@@ -336,23 +349,36 @@ def get_target_data():
             'dates': [p.date.strftime('%Y-%m-%d') for p in points],
             'values': [p.value for p in points],
             'totals': [p.total for p in points],
-            'percentages': [(p.value / p.total * 100) if p.total else None for p in points]
+            'percentages': [(p.value / p.total * 100) if p.total else 0 for p in points]
         }
 
     return jsonify(result)
 
 @app.route('/add_datapoint', methods=['POST'])
 def add_datapoint():
-    target_id = request.form.get('target_id')
-    date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
-    value = float(request.form.get('value'))
-    total = float(request.form.get('total'))
+    try:
+        target_id = int(request.form.get('target_id'))
+        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        value = float(request.form.get('value'))
+        total = float(request.form.get('total'))
+    except Exception:
+        return jsonify({'error': 'Invalid input'}), 400
 
+    # Check for existing datapoint for this target/date
+    existing = DataPoint.query.filter_by(target_id=target_id, date=date).first()
+
+    if existing:
+        existing.value = value
+        existing.total = total
+        db.session.commit()
+        return jsonify({'updated': True})
+
+    # Otherwise create a new datapoint
     dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
     db.session.add(dp)
     db.session.commit()
 
-    return jsonify({'success': True})
+    return jsonify({'updated': False})
 
 @app.route('/get_datapoints/<int:target_id>')
 def get_datapoints(target_id):
