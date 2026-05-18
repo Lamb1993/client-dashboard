@@ -110,6 +110,10 @@ button:hover {
     flex: 0 0 auto;          /* button stays compact */
 }
 
+.csv-upload-form {
+    margin-left: 5rem; /* tweak as needed */
+}
+
 .csv-upload-form input[type="file"] {
     max-width: 200px;
 }

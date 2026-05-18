@@ -181,43 +181,50 @@ def get_data(client_id):
 # 2024-01-01,3,6
 # 2024-01-02,5,10
 # 2024-01-03,2,4
-@app.route('/upload_csv/<int:client_id>', methods=['POST'])
-def upload_csv(client_id):
-    file = request.files.get('file')
-
-    if not file:
-        return jsonify({'error': 'No file uploaded'}), 400
-
-    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-    reader = csv.reader(stream)
-
+@app.route('/upload_target_csv/<int:target_id>', methods=['POST'])
+def upload_target_csv(target_id):
+    file = request.files['csv_file']
     created = 0
     updated = 0
 
-    for row in reader:
-        if len(row) < 3:
+    for raw_line in file.stream.read().decode('utf-8').splitlines():
+        line = raw_line.strip()
+
+        if not line:
             continue
 
-        date_str, value_str, total_str = row[0], row[1], row[2]
+        # Skip header row
+        if line.lower().startswith("date"):
+            continue
 
         try:
-            date = datetime.strptime(date_str.strip(), '%Y-%m-%d').date()
-            value = float(value_str)
-            total = float(total_str)
-        except Exception:
+            date_str, value_str, total_str = [x.strip() for x in line.split(',')]
+        except ValueError:
             continue
 
-        existing = ClientData.query.filter_by(client_id=client_id, date=date).first()
+        # Convert date → Python date object
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
 
-        if existing:
-            existing.value = value
-            existing.total = total
-            existing.created_at = datetime.utcnow()
+        # Convert numbers
+        try:
+            value = float(value_str)
+            total = float(total_str)
+        except ValueError:
+            continue
+
+        # Insert/update
+        dp = DataPoint.query.filter_by(target_id=target_id, date=date_obj).first()
+        if dp:
+            dp.value = value
+            dp.total = total
             updated += 1
         else:
-            dp = ClientData(
-                client_id=client_id,
-                date=date,
+            dp = DataPoint(
+                target_id=target_id,
+                date=date_obj,
                 value=value,
                 total=total
             )

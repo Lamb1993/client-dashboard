@@ -333,19 +333,34 @@ function loadTargets(programId) {
                     </div>
 
                     <div class="target-body" id="target-body-${t.id}" style="display:none;">
-                        <form class="datapoint-form d-flex align-items-center gap-1 mb-0"
-                            onsubmit="addDataPoint(event, ${t.id})">
+                        
+                        <div class="d-flex flex-wrap align-items-center gap-2">
 
-                            <input type="date" name="date" class="form-control form-control-sm"
-                                required style="max-width: 150px;">
-                            <input type="number" step="any" name="value"
-                                class="form-control form-control-sm"
-                                placeholder="Value" required style="max-width: 120px;">
-                            <input type="number" step="any" name="total"
-                                class="form-control form-control-sm"
-                                placeholder="Total" required style="max-width: 120px;">
-                            <button type="submit" class="btn btn-success btn-sm">Add</button>
-                        </form>
+                            <!-- Add Data Form -->
+                            <form class="datapoint-form d-flex align-items-center gap-1 mb-0"
+                                onsubmit="addDataPoint(event, ${t.id})">
+
+                                <input type="date" name="date" class="form-control form-control-sm"
+                                    required style="max-width: 150px;">
+                                <input type="number" step="any" name="value"
+                                    class="form-control form-control-sm"
+                                    placeholder="Value" required style="max-width: 120px;">
+                                <input type="number" step="any" name="total"
+                                    class="form-control form-control-sm"
+                                    placeholder="Total" required style="max-width: 120px;">
+                                <button type="submit" class="btn btn-success btn-sm">Add</button>
+                            </form>
+
+                            <!-- CSV Upload Form -->
+                            <form class="csv-upload-form d-flex align-items-center gap-1 mb-0"
+                                onsubmit="uploadTargetCSV(event, ${t.id})"
+                                enctype="multipart/form-data">
+
+                                <input type="file" name="csv_file" accept=".csv"
+                                    class="form-control form-control-sm" style="max-width: 250px;" required>
+                                <button type="submit" class="btn btn-secondary btn-sm">Upload CSV</button>
+                            </form>
+                        </div>
                     </div>
 
                 </div>
@@ -492,6 +507,22 @@ function deleteDataPoint(dpId, targetId) {
     });
 }
 
+function uploadTargetCSV(e, targetId) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    $.ajax({
+        url: '/upload_target_csv/' + targetId,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+            alert(`Created: ${res.created}\nUpdated: ${res.updated}`);
+            e.target.reset();
+        }
+    });
+}
 
 $(document).ready(function () {
 
