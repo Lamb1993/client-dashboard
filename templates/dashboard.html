@@ -34,10 +34,9 @@
                 <strong>{{ client.name }}</strong>
                 
                 <div>
-                    <button class="btn btn-primary btn-sm" onclick="window.location='/client/{{ client.id }}'">
-                        Open
-                    </button>
+                    <button class="btn btn-success btn-sm" onclick="window.location='/client/{{ client.id }}'">Open</button>
                     <button class="btn btn-warning btn-sm archive-client" data-id="{{ client.id }}">Archive</button>
+                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">Delete</button>
                 </div>
             </div>
         </div>

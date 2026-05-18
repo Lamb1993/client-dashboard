@@ -166,6 +166,14 @@ button:hover {
     height: 80vh; /* modal height */
 }
 
+/* -------------------------
+   Misc.
+--------------------------- */
+
+strong {
+    font-weight: 500; /* medium instead of bold */
+}
+
 
 /* -------------------------
    Responsive adjustments
