@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"> <!-- full access to icon set -->
 </head>
 
 <body>
@@ -37,7 +38,7 @@
             <input type="text" id="pl-name" class="form-control form-control-sm"
                 placeholder="New Program List">
             <button class="btn btn-primary btn-sm" onclick="addProgramList({{ client.id }})">
-                Add
+                <i class="bi bi-plus-circle"></i>
             </button>
         </div>
 
@@ -154,9 +155,8 @@ function loadProgramLists(clientId) {
                             <span id="pl-arrow-${plId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm"
-                                onclick="event.stopPropagation(); deleteProgramList(${plId}, ${clientId})">
-                            Delete List
+                        <button class="btn btn-danger btn-sm delete-program-list" onclick="event.stopPropagation(); deleteProgramList(${plId}, ${clientId})">
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
 
@@ -170,7 +170,7 @@ function loadProgramLists(clientId) {
                                    placeholder="New Program">
                             <button class="btn btn-primary btn-sm"
                                     onclick="addProgram(${plId})">
-                                Add
+                                <i class="bi bi-plus-circle"></i>
                             </button>
                         </div>
 
@@ -238,9 +238,9 @@ function loadPrograms(programListId) {
                             <span id="program-arrow-${programId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm"
+                        <button class="btn btn-danger btn-sm delete-program"
                                 onclick="event.stopPropagation(); deleteProgram(${programId}, ${programListId})">
-                            Delete Program
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
 
@@ -252,7 +252,7 @@ function loadPrograms(programListId) {
                                 placeholder="New Target">
                             <button class="btn btn-primary btn-sm"
                                     onclick="addTarget(${programId})">
-                                Add
+                                <i class="bi bi-plus-circle"></i>
                             </button>
                         </div>
 
@@ -326,9 +326,9 @@ function loadTargets(programId) {
                             <span id="target-arrow-${t.id}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm"
+                        <button class="btn btn-danger btn-sm delete-target"
                                 onclick="event.stopPropagation(); deleteTarget(${t.id}, ${programId})">
-                            Delete
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
 
@@ -348,7 +348,7 @@ function loadTargets(programId) {
                                 <input type="number" step="any" name="total"
                                     class="form-control form-control-sm"
                                     placeholder="Total" required style="max-width: 120px;">
-                                <button type="submit" class="btn btn-success btn-sm">Add</button>
+                                <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-plus-circle"></i></button>
                             </form>
 
                             <!-- CSV Upload Form -->

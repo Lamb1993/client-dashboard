@@ -63,6 +63,14 @@ button:hover {
     transform: scale(1.05);
 }
 
+.btn-primary i,
+.btn-success i,
+.btn-warning i,
+.btn-danger i {
+    font-size: 1rem;
+    vertical-align: middle;
+}
+
 
 /* -------------------------
    Slider Threshold
