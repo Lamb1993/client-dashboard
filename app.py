@@ -354,60 +354,46 @@ def get_target_data():
 
     return jsonify(result)
 
-@app.route('/add_datapoint', methods=['POST'])
-def add_datapoint():
+
+#####################################
+# Datapoints Routes
+#####################################
+@app.route('/add_or_update_datapoint', methods=['POST']) # type: ignore
+def add_or_update_datapoint():
     try:
-        target_id = int(request.form.get('target_id'))
-        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
-        value = float(request.form.get('value'))
-        total = float(request.form.get('total'))
+        target_id = int(request.form.get('target_id')) # type: ignore
+        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date() # type: ignore
+        value = float(request.form.get('value')) # type: ignore
+        total = float(request.form.get('total')) # type: ignore
     except Exception:
         return jsonify({'error': 'Invalid input'}), 400
 
+    # Did the user confirm an update?
+    confirm = request.form.get('confirm', 'false').lower() == 'true'
+
     existing = DataPoint.query.filter_by(target_id=target_id, date=date).first()
 
-    if existing: # don't insert another datapoint if a one already exists for that date.
+    # CASE 1 - Datapoint exists but user has NOT confirmed yet
+    if existing and not confirm:
         return jsonify({
-            'updated': True,
+            'needs_confirmation': True,
             'old_value': existing.value,
             'old_total': existing.total
         })
 
-    # create new datapoint
-    dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
-    db.session.add(dp)
-    db.session.commit()
+    # CASE 2 - Datapoint exists AND user confirmed - perform update
+    if existing and confirm:
+        existing.value = value
+        existing.total = total
+        db.session.commit()
+        return jsonify({'updated': True})
 
-    return jsonify({'updated': False})
-
-
-    # create new datapoint
-    dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
-    db.session.add(dp)
-    db.session.commit()
-
-    return jsonify({'updated': False})
-
-# only called if an existing datapoint already exists
-@app.route('/update_datapoint', methods=['POST'])
-def update_datapoint():
-    try:
-        target_id = int(request.form.get('target_id'))
-        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
-        value = float(request.form.get('value'))
-        total = float(request.form.get('total'))
-    except Exception:
-        return jsonify({'error': 'Invalid input'}), 400
-
-    existing = DataPoint.query.filter_by(target_id=target_id, date=date).first()
+    # CASE 3 - No datapoint exists - create new
     if not existing:
-        return jsonify({'error': 'Not found'}), 404
-
-    existing.value = value
-    existing.total = total
-    db.session.commit()
-
-    return jsonify({'success': True})
+        dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
+        db.session.add(dp)
+        db.session.commit()
+        return jsonify({'created': True})
 
 @app.route('/get_datapoints/<int:target_id>')
 def get_datapoints(target_id):

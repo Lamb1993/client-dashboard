@@ -336,14 +336,14 @@ function addTarget(programId) {
     });
 }
 
-function loadTargets(programId) {
+function loadTargets(programId, openId = null) {
     $.get('/get_targets/' + programId, function(targets) {
         const container = $('#targets-' + programId);
         container.empty();
 
         targets.forEach(t => {
             container.append(`
-                <div class="target-card mb-2">
+                <div class="target-card mb-2" data-program-id="${programId}">
 
                     <div class="target-header d-flex justify-content-between align-items-center"
                         data-id="${t.id}">
@@ -395,6 +395,12 @@ function loadTargets(programId) {
 
                 </div>
             `);
+
+            // Re-open the previously open target
+            if (openId === t.id) {
+                $('#target-body-' + t.id).show();
+                $('#target-arrow-' + t.id).text('▲');
+            }
         });
     });
 }
@@ -539,41 +545,40 @@ function addDataPoint(e, targetId) {
     e.preventDefault();
 
     const form = $(e.target);
+    const programId = form.closest('.target-card').data('program-id');
+
+    // Detect which target is open
+    const openTargetId = $('.target-body:visible').attr('id');
+    const openId = openTargetId ? parseInt(openTargetId.replace('target-body-', '')) : null;
+
     const formData = form.serialize() + '&target_id=' + targetId;
 
-    // Step 1: check if update needed
-    $.post('/add_datapoint', formData, function(response) {
+    $.post('/add_or_update_datapoint', formData, function(response) {
 
-        if (response.updated) {
+        if (response.needs_confirmation) {
+            const value = form.find('[name=value]').val();
+            const total = form.find('[name=total]').val();
+
             const ok = confirm(
-                `A datapoint already exists for this date.\n\n` +
+                `A datapoint already exists.\n\n` +
                 `Old: ${response.old_value}/${response.old_total}\n` +
-                `New: ${form.find('[name=value]').val()}/${form.find('[name=total]').val()}\n\n` +
+                `New: ${value}/${total}\n\n` +
                 `Update it?`
             );
 
-            if (!ok) {
-                return; // user cancelled - do nothing
-            }
+            if (!ok) return;
 
-            // Step 2: user confirmed → perform update
-            $.post('/update_datapoint', formData, function() {
-                loadDataPoints(targetId);
+            $.post('/add_or_update_datapoint', formData + '&confirm=true', function() {
+                loadTargets(programId, openId);
                 form[0].reset();
             });
 
             return;
         }
 
-        // Step 3: normal create
-        loadDataPoints(targetId);
+        // No confirmation needed
+        loadTargets(programId, openId);
         form[0].reset();
-    });
-}
-
-function deleteDataPoint(dpId, targetId) {
-    $.post('/delete_datapoint/' + dpId, function() {
-        loadDataPoints(targetId);
     });
 }
 
