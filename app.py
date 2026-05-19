@@ -364,21 +364,50 @@ def add_datapoint():
     except Exception:
         return jsonify({'error': 'Invalid input'}), 400
 
-    # Check for existing datapoint for this target/date
     existing = DataPoint.query.filter_by(target_id=target_id, date=date).first()
 
-    if existing:
-        existing.value = value
-        existing.total = total
-        db.session.commit()
-        return jsonify({'updated': True})
+    if existing: # don't insert another datapoint if a one already exists for that date.
+        return jsonify({
+            'updated': True,
+            'old_value': existing.value,
+            'old_total': existing.total
+        })
 
-    # Otherwise create a new datapoint
+    # create new datapoint
     dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
     db.session.add(dp)
     db.session.commit()
 
     return jsonify({'updated': False})
+
+
+    # create new datapoint
+    dp = DataPoint(target_id=target_id, date=date, value=value, total=total)
+    db.session.add(dp)
+    db.session.commit()
+
+    return jsonify({'updated': False})
+
+# only called if an existing datapoint already exists
+@app.route('/update_datapoint', methods=['POST'])
+def update_datapoint():
+    try:
+        target_id = int(request.form.get('target_id'))
+        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        value = float(request.form.get('value'))
+        total = float(request.form.get('total'))
+    except Exception:
+        return jsonify({'error': 'Invalid input'}), 400
+
+    existing = DataPoint.query.filter_by(target_id=target_id, date=date).first()
+    if not existing:
+        return jsonify({'error': 'Not found'}), 404
+
+    existing.value = value
+    existing.total = total
+    db.session.commit()
+
+    return jsonify({'success': True})
 
 @app.route('/get_datapoints/<int:target_id>')
 def get_datapoints(target_id):

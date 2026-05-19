@@ -541,7 +541,31 @@ function addDataPoint(e, targetId) {
     const form = $(e.target);
     const formData = form.serialize() + '&target_id=' + targetId;
 
-    $.post('/add_datapoint', formData, function() {
+    // Step 1: check if update needed
+    $.post('/add_datapoint', formData, function(response) {
+
+        if (response.updated) {
+            const ok = confirm(
+                `A datapoint already exists for this date.\n\n` +
+                `Old: ${response.old_value}/${response.old_total}\n` +
+                `New: ${form.find('[name=value]').val()}/${form.find('[name=total]').val()}\n\n` +
+                `Update it?`
+            );
+
+            if (!ok) {
+                return; // user cancelled - do nothing
+            }
+
+            // Step 2: user confirmed → perform update
+            $.post('/update_datapoint', formData, function() {
+                loadDataPoints(targetId);
+                form[0].reset();
+            });
+
+            return;
+        }
+
+        // Step 3: normal create
         loadDataPoints(targetId);
         form[0].reset();
     });
