@@ -14,10 +14,19 @@
 
     <h1 class="mb-4">{{ client.name }}</h1>
 
-    <button class="btn btn-secondary mb-3"
-            onclick="window.location='/'">
-        ← Back to Dashboard
-    </button>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <!-- LEFT SIDE -->
+        <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+
+        <!-- RIGHT SIDE -->
+        <div class="d-flex align-items-center gap-2">
+            <input type="date" id="start-date" class="form-control" style="width: 160px;">
+            <input type="date" id="end-date" class="form-control" style="width: 160px;">
+            <a id="download-report" class="btn btn-primary">Download Report</a>
+        </div>
+
+    </div>
 
     <!-- Program Lists Section -->
     <div class="program-list-section mt-3">
@@ -619,6 +628,20 @@ $(document).ready(function () {
     });
 
 });
+
+document.getElementById("download-report").onclick = function () {
+    const start = document.getElementById("start-date").value;
+    const end = document.getElementById("end-date").value;
+
+    // Build URL with query parameters
+    let url = `/client/{{ client.id }}/download_report`;
+
+    if (start && end) {
+        url += `?start=${start}&end=${end}`;
+    }
+
+    window.location = url;
+};
 
 </script>
 

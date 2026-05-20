@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial; }
+        h1 { border-bottom: 2px solid #000; padding-bottom: 5px; }
+        h2 { margin-top: 30px; }
+        h3 { margin-top: 15px; }
+    </style>
+</head>
+
+<body>
+
+<h1>Report for {{ data.client.name }}</h1>
+
+{% if data.start and data.end %}
+<p><strong>Date Range:</strong> {{ data.start }} → {{ data.end }}</p>
+{% endif %}
+
+{% for pl in data.program_lists %}
+    <h2>{{ pl.name }}</h2>
+
+    {% for program in pl.programs %}
+        <h3>{{ program.name }}</h3>
+
+        {% for target in program.targets %}
+            <p><strong>Target:</strong> {{ target.name }}</p>
+
+            {% if target.chart %}
+                <img src="data:image/png;base64,{{ target.chart }}" style="width: 100%; max-width: 600px; margin-bottom: 20px;">
+            {% else %}
+                <p>No data available for this date range.</p>
+            {% endif %}
+        {% endfor %} <!-- end Target -->
+    {% endfor %} <!-- end Program -->
+{% endfor %} <!-- end Program List -->
+</body>
+</html>

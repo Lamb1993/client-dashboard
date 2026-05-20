@@ -1,10 +1,13 @@
 import os
 import io
-import csv
-from flask import Flask, render_template, request, jsonify
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from sqlalchemy import Index, UniqueConstraint
+from xhtml2pdf import pisa
+import plotly.graph_objects as go
+import base64
 
 basedir = os.path.abspath(os.path.dirname(__file__))
     
@@ -14,9 +17,21 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 #####################################
+# Helpers
+#####################################
+def normalize_date(value):
+    return value.date() if isinstance(value, datetime) else value
+
+def fig_to_base64(fig):
+    buffer = io.BytesIO()
+    fig.write_image(buffer, format="png")
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return encoded
+
+
+#####################################
 # Database Models (Tables)
 #####################################
-
 # Models - tables for SQLAlchemy metadata
 class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -58,6 +73,7 @@ class DataPoint(db.Model):
     value = db.Column(db.Float, nullable=False)
     total = db.Column(db.Float, nullable=False)
   
+# old?
 class ClientData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
@@ -81,7 +97,6 @@ with app.app_context():
 #####################################
 # Dashboard Routes
 #####################################
-
 # Dashboard - show active and archived clients
 @app.route('/')
 def index():
@@ -414,6 +429,96 @@ def delete_datapoint(dp_id):
     db.session.delete(dp)
     db.session.commit()
     return jsonify({'success': True})
+
+#####################################
+# Report Routes
+#####################################
+@app.route('/client/<int:client_id>/download_report')
+def download_report(client_id):
+    client = Client.query.get_or_404(client_id)
+
+    # Read date range from query params
+    start = request.args.get("start")
+    end = request.args.get("end")
+
+    # Convert to datetime objects
+    start_dt = datetime.strptime(start, "%Y-%m-%d").date() if start else None
+    end_dt = datetime.strptime(end, "%Y-%m-%d").date() if end else None
+
+    # Filter datapoints by date
+    filtered_program_lists = []
+
+    for pl in client.program_lists:
+        pl_data = {"name": pl.name, "programs": []}
+
+        for program in pl.programs:
+            prog_data = {"name": program.name, "targets": []}
+
+            for target in program.targets:
+
+                # Filter datapoints (your existing logic)
+                filtered_points = [
+                    dp for dp in target.data_points
+                    if (not start_dt or normalize_date(dp.date) >= start_dt)
+                    and (not end_dt or normalize_date(dp.date) <= end_dt)
+                ]
+
+                # Build chart if there is data
+                chart_base64 = None
+                if filtered_points:
+                    filtered_points.sort(key=lambda dp: normalize_date(dp.date))
+                    dates = [normalize_date(dp.date) for dp in filtered_points]
+                    percentages = [
+                        (dp.value / dp.total * 100) if dp.total else 0
+                        for dp in filtered_points
+                    ]
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=dates,
+                        y=percentages,
+                        mode="lines+markers",
+                        line=dict(color="blue"),
+                        connectgaps=False,  # 👈 prevents joining across missing or non‑sequential data
+                    ))
+
+                    fig.update_layout(
+                        title=f"{target.name} Progress",
+                        xaxis_title="Date",
+                        yaxis_title="Percentage (%)",
+                        height=300,
+                        margin=dict(l=20, r=20, t=40, b=20)
+                    )
+
+                    chart_base64 = fig_to_base64(fig)
+
+                prog_data["targets"].append({
+                    "name": target.name,
+                    "datapoints": filtered_points,
+                    "chart": chart_base64
+                })
+
+            pl_data["programs"].append(prog_data)
+
+        filtered_program_lists.append(pl_data)
+
+    data = {
+        "client": client,
+        "program_lists": filtered_program_lists,
+        "start": start,
+        "end": end
+    }
+
+    html = render_template("report_pdf.html", data=data)
+
+    pdf_bytes = io.BytesIO()
+    pisa.CreatePDF(io.StringIO(html), dest=pdf_bytes)
+
+    response = make_response(pdf_bytes.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=report_{client.name}.pdf'
+
+    return response
 
 
 if __name__ == '__main__':
