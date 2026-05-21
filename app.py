@@ -9,6 +9,10 @@ from xhtml2pdf import pisa
 import plotly.graph_objects as go
 import base64
 
+import matplotlib
+matplotlib.use('Agg') # needed for headless servers
+import matplotlib.pyplot as plt
+
 basedir = os.path.abspath(os.path.dirname(__file__))
     
 app = Flask(__name__)
@@ -22,10 +26,20 @@ db = SQLAlchemy(app)
 def normalize_date(value):
     return value.date() if isinstance(value, datetime) else value
 
+# plotly helper to convert the chart to base64 PNG
 def fig_to_base64(fig):
     buffer = io.BytesIO()
     fig.write_image(buffer, format="png")
     encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return encoded
+
+# matplotlib helper to convert the chart to base64 PNG
+def mpl_to_base64():
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', bbox_inches='tight')
+    buffer.seek(0)
+    encoded = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    plt.close()  # free memory
     return encoded
 
 
@@ -145,7 +159,6 @@ def add_client():
 #####################################
 # Client Page Routes
 #####################################
-
 # Client Page - render a new template for a single client
 @app.route('/client/<int:client_id>')
 def client_page(client_id):
@@ -257,7 +270,6 @@ def upload_target_csv(target_id):
 #####################################
 # Program List Routes
 #####################################
-
 @app.route('/add_program_list', methods=['POST'])
 def add_program_list():
     client_id = request.form.get('client_id')
@@ -288,7 +300,6 @@ def delete_program_list(pl_id):
 #####################################
 # Program Routes
 #####################################
-
 @app.route('/add_program', methods=['POST'])
 def add_program():
     pl_id = request.form.get('program_list_id')
@@ -319,7 +330,6 @@ def delete_program(program_id):
 #####################################
 # Targets Routes
 #####################################
-
 @app.route('/add_target', methods=['POST'])
 def add_target():
     program_id = request.form.get('program_id')
@@ -435,6 +445,7 @@ def delete_datapoint(dp_id):
 #####################################
 @app.route('/client/<int:client_id>/download_report')
 def download_report(client_id):
+    threshold = request.args.get("threshold", type=float)
     client = Client.query.get_or_404(client_id)
 
     # Read date range from query params
@@ -456,7 +467,7 @@ def download_report(client_id):
 
             for target in program.targets:
 
-                # Filter datapoints (your existing logic)
+                # Filter datapoints
                 filtered_points = [
                     dp for dp in target.data_points
                     if (not start_dt or normalize_date(dp.date) >= start_dt)
@@ -466,6 +477,9 @@ def download_report(client_id):
                 # Build chart if there is data
                 chart_base64 = None
                 if filtered_points:
+
+                    """
+                    # plotly method
                     filtered_points.sort(key=lambda dp: normalize_date(dp.date))
                     dates = [normalize_date(dp.date) for dp in filtered_points]
                     percentages = [
@@ -491,6 +505,38 @@ def download_report(client_id):
                     )
 
                     chart_base64 = fig_to_base64(fig)
+                    """
+
+                    # matplotlib method
+                    # Sort datapoints first
+                    filtered_points.sort(key=lambda dp: normalize_date(dp.date))
+
+                    plt.figure(figsize=(8.5, 3))
+                    plt.subplots_adjust(left=0.08, right=0.98, top=0.85, bottom=0.2)
+
+                    dates = [normalize_date(dp.date) for dp in filtered_points]
+                    percentages = [(dp.value / dp.total * 100) if dp.total else 0 for dp in filtered_points]
+
+                    plt.plot(dates, percentages, marker='o', color='blue')
+                    plt.title(f"{target.name} Progress")
+                    plt.xlabel("Date")
+                    plt.xticks(rotation=45, ha='right')
+                    plt.ylabel("Percentage (%)")
+                    plt.ylim(0, 100)
+                    plt.grid(True, alpha=0.3)
+
+                    # Threshold line
+                    if threshold is not None:
+                        plt.axhline(
+                            y=threshold,
+                            color='red',
+                            linestyle='--',
+                            linewidth=1.5,
+                            label=f'Threshold ({threshold}%)'
+                        )
+                        plt.legend(loc='upper right', fontsize=8)
+
+                    chart_base64 = mpl_to_base64()
 
                 prog_data["targets"].append({
                     "name": target.name,

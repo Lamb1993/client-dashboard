@@ -633,15 +633,23 @@ document.getElementById("download-report").onclick = function () {
     const start = document.getElementById("start-date").value;
     const end = document.getElementById("end-date").value;
 
-    // Build URL with query parameters
+    const threshold = GLOBAL_THRESHOLD;  // global graph threshold value
+
     let url = `/client/{{ client.id }}/download_report`;
 
-    if (start && end) {
-        url += `?start=${start}&end=${end}`;
+    const params = [];
+
+    if (start) params.push(`start=${start}`);
+    if (end) params.push(`end=${end}`);
+    if (threshold !== undefined) params.push(`threshold=${threshold}`); // include threshold value
+
+    if (params.length > 0) {
+        url += "?" + params.join("&");
     }
 
     window.location = url;
 };
+
 
 </script>
 

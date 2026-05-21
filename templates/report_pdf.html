@@ -2,8 +2,18 @@
 <html>
 <head>
     <style>
-        body { font-family: Arial; }
-        h1 { border-bottom: 2px solid #000; padding-bottom: 5px; }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        h1 {
+            border-bottom: 2px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+
         h2 { margin-top: 30px; }
         h3 { margin-top: 15px; }
     </style>
@@ -13,26 +23,29 @@
 
 <h1>Report for {{ data.client.name }}</h1>
 
-{% if data.start and data.end %}
-<p><strong>Date Range:</strong> {{ data.start }} → {{ data.end }}</p>
-{% endif %}
-
 {% for pl in data.program_lists %}
+<div class="program-list" {% if not loop.first %}style="page-break-before: always;"{% endif %}>
     <h2>{{ pl.name }}</h2>
 
     {% for program in pl.programs %}
-        <h3>{{ program.name }}</h3>
+    <div class="program">
+        <h3><strong>Program:</strong> {{ program.name }}</h3>
 
         {% for target in program.targets %}
-            <p><strong>Target:</strong> {{ target.name }}</p>
+            <hr style="border:0; border-top:1px solid #ccc; margin:25px 0 10px 0;">
+
+            <p style="font-weight:bold;">Target: {{ target.name }}</p>
 
             {% if target.chart %}
-                <img src="data:image/png;base64,{{ target.chart }}" style="width: 100%; max-width: 600px; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{{ target.chart }}"
+                    style="width:100%; max-width:700px; margin-bottom:25px;">
             {% else %}
                 <p>No data available for this date range.</p>
             {% endif %}
-        {% endfor %} <!-- end Target -->
-    {% endfor %} <!-- end Program -->
-{% endfor %} <!-- end Program List -->
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
 </body>
 </html>
