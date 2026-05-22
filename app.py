@@ -1,4 +1,5 @@
 import os
+import sys
 import io
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, make_response
@@ -13,10 +14,13 @@ import matplotlib
 matplotlib.use('Agg') # needed for headless servers
 import matplotlib.pyplot as plt
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-    
+if getattr(sys, 'frozen', False): # Running as a PyInstaller EXE
+    db_path = os.path.join(os.path.dirname(sys.executable), 'clientdata.db')
+else: # Running normally (VS Code, python app.py, etc.)
+    db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'clientdata.db')
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'dashboard.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
