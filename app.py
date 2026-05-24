@@ -178,7 +178,6 @@ def edit_client(client_id):
     return jsonify({'success': True, 'name': client.name})
 
 
-
 #####################################
 # Client Page Routes
 #####################################
@@ -318,6 +317,19 @@ def delete_program_list(pl_id):
     db.session.delete(pl)
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/edit_program_list/<int:pl_id>', methods=['POST'])
+def edit_program_list(pl_id):
+    pl = ProgramList.query.get_or_404(pl_id)
+    new_name = request.form.get('name')
+
+    if not new_name:
+        return jsonify({'error': 'Name required'}), 400
+
+    pl.name = new_name
+    db.session.commit()
+
+    return jsonify({'success': True, 'name': pl.name})
 
 
 #####################################

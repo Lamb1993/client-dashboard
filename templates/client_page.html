@@ -159,13 +159,19 @@ function loadProgramLists(clientId) {
                         data-id="${plId}">
 
                         <div class="d-flex align-items-center gap-2">
-                            <strong>${pl.name}</strong>
+                            <strong id="pl-name-${plId}">${pl.name}</strong>
                             <span id="pl-arrow-${plId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm delete-program-list" data-id="${plId}">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary btn-sm icon-btn edit-program-list" data-id="${plId}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
+                            <button class="btn btn-danger btn-sm icon-btn delete-program-list" data-id="${plId}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- COLLAPSIBLE BODY -->
@@ -213,6 +219,7 @@ function toggleProgramList(plId) {
     }
 }
 
+// Delete Program List Item
 $(document).on('click', '.delete-program-list', function(event) {
     event.stopPropagation(); // NOW it works
     const id = $(this).data('id');
@@ -224,9 +231,29 @@ $(document).on('click', '.delete-program-list', function(event) {
     }
 });
 
+// Toggle Program List body
 $(document).on('click', '.program-list-header', function() {
     const id = $(this).data('id');
     toggleProgramList(id);
+});
+
+// Edit Program List Item
+$(document).on('click', '.edit-program-list', function(event) {
+    event.stopPropagation();
+
+    const plId = $(this).data('id');
+    const currentName = $(`#pl-name-${plId}`).text();
+
+    const newName = prompt("Edit program list name:", currentName);
+    if (!newName || newName.trim() === "") return;
+
+    $.post(`/edit_program_list/${plId}`, { name: newName }, function(res) {
+        if (res.success) {
+            $(`#pl-name-${plId}`).text(res.name);
+        } else if (res.error) {
+            alert(res.error);
+        }
+    });
 });
 
 
