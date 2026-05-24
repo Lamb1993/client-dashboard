@@ -159,6 +159,25 @@ def add_client():
         return jsonify({'id': client.id, 'name': client.name})
     return jsonify({'error': 'Name required'}), 400
 
+@app.route('/edit_client/<int:client_id>', methods=['POST'])
+def edit_client(client_id):
+    client = Client.query.get_or_404(client_id)
+    new_name = request.form.get('name')
+
+    if not new_name:
+        return jsonify({'error': 'Name required'}), 400
+
+    # Prevent duplicate names
+    existing = Client.query.filter_by(name=new_name).first()
+    if existing and existing.id != client_id:
+        return jsonify({'error': 'Client name already exists'}), 400
+
+    client.name = new_name
+    db.session.commit()
+
+    return jsonify({'success': True, 'name': client.name})
+
+
 
 #####################################
 # Client Page Routes
@@ -443,6 +462,7 @@ def delete_datapoint(dp_id):
     db.session.delete(dp)
     db.session.commit()
     return jsonify({'success': True})
+
 
 #####################################
 # Report Routes

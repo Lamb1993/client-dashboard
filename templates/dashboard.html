@@ -33,14 +33,17 @@
         {% for client in active_clients %}
         <div class="card mb-3" id="client-{{ client.id }}">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>{{ client.name }}</strong>
+                <strong id="client-name-{{ client.id }}">{{ client.name }}</strong>
                 
                 <div>
                     <button class="btn btn-success btn-sm" onclick="window.location='/client/{{ client.id }}'">Open</button>
-                    <button class="btn btn-warning btn-sm archive-client" data-id="{{ client.id }}">
+                    <button class="btn btn-secondary btn-sm icon-btn edit-client" data-id="{{ client.id }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-warning btn-sm icon-btn archive-client" data-id="{{ client.id }}">
                         <i class="bi bi-archive"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">
+                    <button class="btn btn-danger btn-sm icon-btn delete-client" data-id="{{ client.id }}">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -54,12 +57,15 @@
         {% for client in archived_clients %}
         <div class="card mb-3" id="client-{{ client.id }}">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>{{ client.name }}</strong>
+                <strong id="client-name-{{ client.id }}">{{ client.name }}</strong>
                 <div>
-                    <button class="btn btn-warning btn-sm unarchive-client" data-id="{{ client.id }}">
-                        <i class="bi bi-box-arrow-up"></i>
+                    <button class="btn btn-secondary btn-sm icon-btn edit-client" data-id="{{ client.id }}">
+                        <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-danger btn-sm delete-client" data-id="{{ client.id }}">
+                    <button class="btn btn-warning btn-sm icon-btn archive-client" data-id="{{ client.id }}">
+                        <i class="bi bi-archive"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm icon-btn delete-client" data-id="{{ client.id }}">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -82,6 +88,24 @@ $(document).ready(function() {
             location.reload();
         });
     });
+
+    // Edit client
+    $(document).on('click', '.edit-client', function() {
+        const clientId = $(this).data('id');
+        const currentName = $(`#client-name-${clientId}`).text();
+
+        const newName = prompt("Edit client name:", currentName);
+        if (!newName || newName.trim() === "") return;
+
+        $.post(`/edit_client/${clientId}`, { name: newName }, function(res) {
+            if (res.success) {
+                $(`#client-name-${clientId}`).text(res.name);
+            } else if (res.error) {
+                alert(res.error);
+            }
+        });
+    });
+
 
     // -----------------------------
     // Dark Mode Toggle
