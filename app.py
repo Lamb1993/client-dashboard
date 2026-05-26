@@ -361,6 +361,19 @@ def delete_program(program_id):
     db.session.commit()
     return jsonify({'success': True})
 
+@app.route('/edit_program/<int:program_id>', methods=['POST'])
+def edit_program(program_id):
+    program = Program.query.get_or_404(program_id)
+    new_name = request.form.get('name')
+
+    if not new_name:
+        return jsonify({'error': 'Name required'}), 400
+
+    program.name = new_name
+    db.session.commit()
+
+    return jsonify({'success': True, 'name': program.name})
+
 
 #####################################
 # Targets Routes

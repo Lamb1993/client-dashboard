@@ -231,12 +231,6 @@ $(document).on('click', '.delete-program-list', function(event) {
     }
 });
 
-// Toggle Program List body
-$(document).on('click', '.program-list-header', function() {
-    const id = $(this).data('id');
-    toggleProgramList(id);
-});
-
 // Edit Program List Item
 $(document).on('click', '.edit-program-list', function(event) {
     event.stopPropagation();
@@ -254,6 +248,12 @@ $(document).on('click', '.edit-program-list', function(event) {
             alert(res.error);
         }
     });
+});
+
+// Toggle Program List body
+$(document).on('click', '.program-list-header', function() {
+    const id = $(this).data('id');
+    toggleProgramList(id);
 });
 
 
@@ -285,13 +285,23 @@ function loadPrograms(programListId) {
                         data-id="${programId}">
 
                         <div class="d-flex align-items-center gap-2">
-                            <strong>${p.name}</strong>
+                            <strong id="program-name-${programId}">${p.name}</strong>
                             <span id="program-arrow-${programId}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm delete-program" data-id="${programId}">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary btn-sm icon-btn edit-program"
+                                    data-id="${programId}"
+                                    data-pl="${programListId}"
+                                    data-name="${p.name}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
+                            <button class="btn btn-danger btn-sm icon-btn delete-program"
+                                    data-id="${programId}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="program-body" id="program-body-${programId}" style="display:none;">
@@ -351,6 +361,34 @@ $(document).on('click', '.delete-program', function(event) {
             location.reload();
         });
     }
+});
+
+// Edit Program
+$(document).on('click', '.edit-program', function(event) {
+    event.stopPropagation(); // prevent collapse
+
+    const programId = $(this).data('id');
+    const plId = $(this).data('pl');
+    const currentName = $(this).data('name');
+
+    const newName = prompt("Edit program name:", currentName);
+    if (!newName || newName.trim() === "") return;
+
+    $.post(`/edit_program/${programId}`, { name: newName }, function(res) {
+        if (res.success) {
+
+            // Update DOM immediately
+            $(`#program-name-${programId}`).text(res.name);
+
+            // Update stored name on the button
+            $(`.edit-program[data-id='${programId}']`).data('name', res.name);
+
+            // Reload the program list so the change persists
+            loadPrograms(plId);
+        } else if (res.error) {
+            alert(res.error);
+        }
+    });
 });
 
 $(document).on('click', '.program-header', function() {
