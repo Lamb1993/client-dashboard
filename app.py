@@ -427,6 +427,19 @@ def get_target_data():
 
     return jsonify(result)
 
+@app.route('/edit_target/<int:target_id>', methods=['POST'])
+def edit_target(target_id):
+    target = Target.query.get_or_404(target_id)
+    new_name = request.form.get('name')
+
+    if not new_name:
+        return jsonify({'error': 'Name required'}), 400
+
+    target.name = new_name
+    db.session.commit()
+
+    return jsonify({'success': True, 'name': target.name})
+
 
 #####################################
 # Datapoints Routes

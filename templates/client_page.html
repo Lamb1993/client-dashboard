@@ -411,6 +411,13 @@ function addTarget(programId) {
 }
 
 function loadTargets(programId, openId = null) {
+    // 1. Capture all currently open targets BEFORE reload
+    const openTargets = [];
+    $(`#targets-${programId} .target-body:visible`).each(function() {
+        const id = $(this).attr('id').replace('target-body-', '');
+        openTargets.push(parseInt(id));
+    });
+
     $.get('/get_targets/' + programId, function(targets) {
         const container = $('#targets-' + programId);
         container.empty();
@@ -426,14 +433,23 @@ function loadTargets(programId, openId = null) {
                             <input type="checkbox" class="target-checkbox"
                                 data-target-id="${t.id}"
                                 onclick="event.stopPropagation();">
-                            <strong>${t.name}</strong>
+                            <strong id="target-name-${t.id}">${t.name}</strong>
                             <span id="target-arrow-${t.id}" class="ms-2">▼</span>
                         </div>
 
-                        <button class="btn btn-danger btn-sm delete-target"
-                                data-id="${t.id}">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary btn-sm edit-target"
+                                    data-id="${t.id}"
+                                    data-program="${programId}"
+                                    data-name="${t.name}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
+                            <button class="btn btn-danger btn-sm delete-target"
+                                    data-id="${t.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="target-body" id="target-body-${t.id}" style="display:none;">
@@ -470,10 +486,10 @@ function loadTargets(programId, openId = null) {
                 </div>
             `);
 
-            // Re-open the previously open target
-            if (openId === t.id) {
-                $('#target-body-' + t.id).show();
-                $('#target-arrow-' + t.id).text('▲');
+            // 2. Re-open ALL previously open targets
+            if (openTargets.includes(t.id)) {
+                $(`#target-body-${t.id}`).show();
+                $(`#target-arrow-${t.id}`).text('▲');
             }
         });
     });
@@ -574,7 +590,40 @@ $(document).on('click', '.delete-target', function(event) {
     }
 });
 
+// Edit Target
+$(document).on('click', '.edit-target', function(event) {
+    event.stopPropagation(); // prevent collapse
+
+    const targetId = $(this).data('id');
+    const programId = $(this).data('program');
+    const currentName = $(this).data('name');
+
+    const newName = prompt("Edit target name:", currentName);
+    if (!newName || newName.trim() === "") return;
+
+    $.post(`/edit_target/${targetId}`, { name: newName }, function(res) {
+        if (res.success) {
+
+            // Update DOM immediately
+            $(`#target-name-${targetId}`).text(res.name);
+
+            // Update stored name on the button
+            $(`.edit-target[data-id='${targetId}']`).data('name', res.name);
+
+            // Reload targets so the change persists
+            loadTargets(programId, targetId);
+        } else if (res.error) {
+            alert(res.error);
+        }
+    });
+});
+
 $(document).on('click', '.target-header', function() {
+    // Ignore clicks on edit/delete buttons
+    if ($(event.target).closest('.edit-target, .delete-target').length > 0) {
+        return;
+    }
+    
     const id = $(this).data('id');
     toggleTarget(id);
 });
