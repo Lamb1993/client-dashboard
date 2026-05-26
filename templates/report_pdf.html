@@ -22,6 +22,7 @@
 <body>
 
 <h1>Report for {{ data.client.name }}</h1>
+<p><strong>Date Range:</strong> {{ data.start }} → {{ data.end }}</p>
 
 {% for pl in data.program_lists %}
 <div class="program-list" {% if not loop.first %}style="page-break-before: always;"{% endif %}>
